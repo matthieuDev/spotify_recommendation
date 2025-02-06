@@ -3,4 +3,6 @@ __pycache__/
 
 *.ipynb
 
+cache/
+
 secrets_keys.py
