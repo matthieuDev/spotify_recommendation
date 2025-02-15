@@ -26,7 +26,6 @@ class spotify_querier :
             self.web_authorisation_token_expiration_date is None or\
             self.web_authorisation_token_expiration_date < time.time():
             response = requests.get("https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
-            print("error, response text:", response.text)
             if response.status_code != 200 :
                 print("error, response text:", response.text)
                 return {}
@@ -37,16 +36,17 @@ class spotify_querier :
         
         return self.web_authorisation_token_expiration
 
-    def post(self, url, headers, payload, cached_filename):
-        cached_path = f'{self.cache_folder}{cached_filename}.json'
-        if os.path.exists(cached_path):
+    def post(self, url, headers, payload, cached_filename=None):
+        if not cached_filename is None and os.path.exists(cached_path):
+            cached_path = f'{self.cache_folder}{cached_filename}.json'
             with open(cached_path, encoding='utf8') as f :
                 return json.load(f)
             
         response = requests.request("POST", url, headers=headers, data=payload).json()
         
-        with open(cached_path, 'w', encoding='utf8') as f :
-            json.dump(response, f)
+        if not cached_filename is None :
+            with open(cached_path, 'w', encoding='utf8') as f :
+                json.dump(response, f)
         return response
     
     def get(self, url, headers, cached_filename):
