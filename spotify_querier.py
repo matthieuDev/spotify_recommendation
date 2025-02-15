@@ -15,7 +15,7 @@ class spotify_querier :
             
     def get_web_authorisation_token(self) :
         '''
-        return type : {
+        requests return type : {
             'clientId': 'XXXXXXXXX',
             'accessToken': 'XXXXXXXXX',
             'accessTokenExpirationTimestampMs': [timestamp in ms],
@@ -24,8 +24,13 @@ class spotify_querier :
         '''
         if self.web_authorisation_token is None or \
             self.web_authorisation_token_expiration_date is None or\
-            self.web_authorisation_token_expiration_date  > time.time():
-            r_token = requests.get("https://open.spotify.com/get_access_token?reason=transport&productType=web_player").json()
+            self.web_authorisation_token_expiration_date < time.time():
+            response = requests.get("https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
+            print("error, response text:", response.text)
+            if response.status_code != 200 :
+                print("error, response text:", response.text)
+                return {}
+            r_token = response.json()
 
             self.web_authorisation_token_expiration_date = r_token['accessTokenExpirationTimestampMs'] / 1000
             self.web_authorisation_token_expiration = r_token['accessToken'] 
@@ -102,7 +107,6 @@ class spotify_querier :
         variables_params = urllib.parse.quote(json.dumps({"uri":f"spotify:playlist:{playlist_id}","offset":0,"limit":100}).replace(' ', ''))
         url = f"https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylistContentsWithGatedEntityRelations&variables={variables_params}&extensions={extensions_param}%7D"
 
-        print(url)
         return self.get(
             url,
             headers = {
@@ -110,3 +114,29 @@ class spotify_querier :
             },
             cached_filename = f'tracks_of_recommended_playlist_{playlist_id}',
         )
+        
+    def get_recommended_tracks_for_playlist(self, playlist_id):
+        track_count = {}
+
+        playlist_to_recommend = self.get_playlist(playlist_id)
+        for track in playlist_to_recommend['tracks']['items']:
+            track_id = track['track']['id']
+            
+            recommended_playlist = self.get_seed_to_playlist_from_track(track_id)
+            recommended_playlist_id = recommended_playlist['mediaItems'][0]['uri']
+            
+            recommended_tracks = self.get_tracks_from_recommended_playlist(recommended_playlist_id)
+            
+            for recommended_track_container in recommended_tracks['data']['playlistV2']['content']['items']:
+                recommended_track = recommended_track_container['itemV2']['data']
+                uri = recommended_track['uri']
+                if uri in track_count :
+                    track_count[uri]['nb_recommended'] += 1
+                else :
+                    track_count[uri] = {
+                        'nb_recommended': 1,
+                        'nb_views': int(recommended_track['playcount']),
+                        'name': recommended_track['name'],
+                    }
+        
+        return track_count
