@@ -1,14 +1,37 @@
-import requests, json, os
+import requests, json, os, time
+import urllib.parse
 
 class spotify_querier :
-    def __init__(self, api_auth_token, web_authorisation_token, cache_folder = 'cache/') :
+    def __init__(self, api_auth_token, cache_folder = 'cache/') :
         self.api_auth_token =  api_auth_token
-        self.web_authorisation_token =  web_authorisation_token
         self.cache_folder = cache_folder
+        
+        self.web_authorisation_token = None
+        self.web_authorisation_token_expiration_date = None
+        self.web_authorisation_token = self.get_web_authorisation_token()
         
         if not os.path.exists(self.cache_folder) :
             os.mkdir(self.cache_folder)
             
+    def get_web_authorisation_token(self) :
+        '''
+        return type : {
+            'clientId': 'XXXXXXXXX',
+            'accessToken': 'XXXXXXXXX',
+            'accessTokenExpirationTimestampMs': [timestamp in ms],
+            'isAnonymous': True
+        }
+        '''
+        if self.web_authorisation_token is None or \
+            self.web_authorisation_token_expiration_date is None or\
+            self.web_authorisation_token_expiration_date  > time.time():
+            r_token = requests.get("https://open.spotify.com/get_access_token?reason=transport&productType=web_player").json()
+
+            self.web_authorisation_token_expiration_date = r_token['accessTokenExpirationTimestampMs'] / 1000
+            self.web_authorisation_token_expiration = r_token['accessToken'] 
+        
+        return self.web_authorisation_token_expiration
+
     def post(self, url, headers, payload, cached_filename):
         cached_path = f'{self.cache_folder}{cached_filename}.json'
         if os.path.exists(cached_path):
@@ -27,7 +50,11 @@ class spotify_querier :
             with open(cached_path, encoding='utf8') as f :
                 return json.load(f)
             
-        response = requests.request("GET", url, headers=headers).json()
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code != 200 :
+            print("error, response text:", response.text)
+            return {}
+        response = response.json()
         
         with open(cached_path, 'w', encoding='utf8') as f :
             json.dump(response, f)
@@ -61,7 +88,8 @@ class spotify_querier :
         return self.get(
             f"https://spclient.wg.spotify.com/inspiredby-mix/v2/seed_to_playlist/spotify:track:{track_id}?response-format=json",
             headers = {
-                'Authorization': f'Bearer {self.web_authorisation_token}'
+                'Authorization': f'Bearer {self.get_web_authorisation_token()}'
             },
             cached_filename = f'seed_to_playlist_{track_id}',
         )
+    
