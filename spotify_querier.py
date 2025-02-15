@@ -93,3 +93,20 @@ class spotify_querier :
             cached_filename = f'seed_to_playlist_{track_id}',
         )
     
+    def get_tracks_from_recommended_playlist(self, playlist_id) :
+        
+        if playlist_id.startswith('spotify:playlist:'):
+            playlist_id = playlist_id.replace('spotify:playlist:', '')
+            
+        extensions_param = urllib.parse.quote('{"persistedQuery":{"version":1,"sha256Hash":"5372ff05b73f2a1c21b392a238c462f6d2a1391200a47ddac51984e0d3fcd65b"}')
+        variables_params = urllib.parse.quote(json.dumps({"uri":f"spotify:playlist:{playlist_id}","offset":0,"limit":100}).replace(' ', ''))
+        url = f"https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylistContentsWithGatedEntityRelations&variables={variables_params}&extensions={extensions_param}%7D"
+
+        print(url)
+        return self.get(
+            url,
+            headers = {
+                'authorization': f'Bearer {self.get_web_authorisation_token()}'
+            },
+            cached_filename = f'tracks_of_recommended_playlist_{playlist_id}',
+        )
