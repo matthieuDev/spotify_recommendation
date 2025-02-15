@@ -50,7 +50,9 @@ def get_auth_token(api_client_id=api_client_id, api_client_secret=api_client_sec
         },
     )
 
-    assert res.status_code == 200
+    if res.status_code != 200:
+        print('"error, response text:", ', res.text)
+        return {} 
     jres = res.json()
     assert 'access_token' in jres
     return jres['access_token']

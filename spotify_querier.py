@@ -42,7 +42,7 @@ class spotify_querier :
             with open(cached_path, encoding='utf8') as f :
                 return json.load(f)
             
-        response = requests.request("POST", url, headers=headers, data=payload).json()
+        response = requests.request("POST", url, headers=headers, data=json.dumps(payload)).json()
         
         if not cached_filename is None :
             with open(cached_path, 'w', encoding='utf8') as f :
@@ -140,3 +140,20 @@ class spotify_querier :
                     }
         
         return track_count
+
+    def create_playlist(self, user_id, new_playlist_name, new_playlist_recommendation) :
+        
+        return self.post(
+            f'https://api.spotify.com/v1/users/{user_id}/playlists',
+            headers = {
+                'authorization': f'Bearer {self.api_auth_token}',
+                'Content-Type': 'application/json',
+            },
+            payload={
+                "name": new_playlist_name,
+                "description": new_playlist_recommendation,
+                "public": False,
+            },
+        )
+        
+        
