@@ -155,5 +155,20 @@ class spotify_querier :
                 "public": False,
             },
         )
+
+    def add_track_to_playlist(self, playlist_id, list_uri_track) :
+        snapshot_results = []
+        for i in range(0, len(list_uri_track), 100) :
+            snapshot_results.append(self.post(
+                f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks',
+                headers = {
+                    'authorization': f'Bearer {self.api_auth_token}',
+                    'Content-Type': 'application/json',
+                },
+                payload={
+                    "uris": list_uri_track[i:i+100],
+                },
+            ))
+        return snapshot_results
         
         
