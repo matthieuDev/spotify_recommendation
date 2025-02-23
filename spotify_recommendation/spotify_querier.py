@@ -1,8 +1,9 @@
 import requests, json, os, time
 import urllib.parse
+from .path import cache_folder
 
 class spotify_querier :
-    def __init__(self, api_auth_token, cache_folder = 'cache/') :
+    def __init__(self, api_auth_token, cache_folder = cache_folder) :
         self.api_auth_token =  api_auth_token
         self.cache_folder = cache_folder
         

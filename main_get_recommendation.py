@@ -1,6 +1,5 @@
-import requests, json, os, time
-from get_auth_token import get_auth_token_pkce
-from spotify_querier import spotify_querier
+from spotify_recommendation.auth_token import get_auth_token_pkce
+from spotify_recommendation.spotify_querier import spotify_querier
 
 def get_recommendation(playlist_id_to_recommend, new_playlist_name, user_id):
     auth_token = get_auth_token_pkce()

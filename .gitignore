@@ -2,7 +2,7 @@
 __pycache__/
 
 *.ipynb
+*.egg-info
 
-cache/
-
-secrets_keys.py
+spotify_recommendation/cache/
+spotify_recommendation/secrets_keys.py

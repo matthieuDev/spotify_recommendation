@@ -1,6 +1,7 @@
 import requests, base64, string, random, os, json
 import urllib.parse
-from secrets_keys import api_client_id, api_client_secret, auth_code, redirect_uri
+from spotify_recommendation.secrets_keys import api_client_id, redirect_uri
+from spotify_recommendation.path import cache_folder
 
 from hashlib import sha256
 from selenium import webdriver
@@ -10,59 +11,8 @@ from selenium.common.exceptions import WebDriverException
 import time
 SELENIUM_TIMEOUT_SECOND = 120  
 
-def get_basic_auth_token(api_client_id=api_client_id, api_client_secret=api_client_secret):
-    base64_auth = base64.b64encode(f'{api_client_id}:{api_client_secret}'.encode("ascii")).decode('ascii')
-    res = requests.post(
-        'https://accounts.spotify.com/api/token',
-        headers={
-            'Authorization': f'Basic {base64_auth}',
-        },
-        data={
-            "grant_type": 'client_credentials'
-        },
-    )
-    assert res.status_code == 200
-    jres = res.json()
-    assert 'access_token' in jres
-    return jres['access_token']
-
 def generate_random_string(length):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-def generate_authorize_url():
-    state = generate_random_string(16)
-    scope = 'playlist-modify-private%20playlist-modify-public'
-
-    query_params = {
-        'response_type': 'code',
-        'client_id': api_client_id,
-        'scope': scope,
-        'redirect_uri': 'http://localhost:8888/callback/',
-        'state': state
-    }
-
-    return 'https://accounts.spotify.com/authorize?' + urllib.parse.urlencode(query_params)
-
-def get_auth_token_with_auth_code(api_client_id=api_client_id, api_client_secret=api_client_secret, auth_code=auth_code, redirect_uri=redirect_uri):
-    base64_auth = base64.b64encode(f'{api_client_id}:{api_client_secret}'.encode("ascii")).decode('ascii')
-    res = requests.post(
-        'https://accounts.spotify.com/api/token',
-        headers={
-            'Authorization': f'Basic {base64_auth}',
-        },
-        data={
-            "grant_type": 'authorization_code',
-            'code': auth_code,
-            'redirect_uri': redirect_uri,
-        },
-    )
-
-    if res.status_code != 200:
-        print('"error, response text:", ', res.text)
-        return {} 
-    jres = res.json()
-    assert 'access_token' in jres
-    return jres['access_token']
 
 def generate_code_challenge_pkce(codeVerifier):
     sha = sha256(codeVerifier.encode('utf-8'))
@@ -106,7 +56,7 @@ def get_auth_code_pkce() :
             return None, code_verifier
     return None, code_verifier
     
-def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, cache_folder = 'cache/'):
+def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, cache_folder = cache_folder):
     cache_auth_token_file = cache_folder + 'auth_token_pkce.json'
     if os.path.exists(cache_auth_token_file) :
         with open(cache_auth_token_file, encoding="utf8") as f :
@@ -152,5 +102,5 @@ def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, 
 
 
 if __name__ == '__main__' :
-    jres = get_auth_token_pkce()
-    print(jres)
+    access_token = get_auth_token_pkce()
+    print(access_token)
