@@ -17,4 +17,3 @@ def get_basic_auth_token(api_client_id=api_client_id, api_client_secret=api_clie
     jres = res.json()
     assert 'access_token' in jres
     return jres['access_token']
-print(api_client_id, api_client_secret)

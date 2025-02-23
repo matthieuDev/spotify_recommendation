@@ -6,3 +6,5 @@ __pycache__/
 
 spotify_recommendation/cache/
 spotify_recommendation/secrets_keys.py
+
+perso_request.txt

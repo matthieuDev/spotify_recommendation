@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-print(find_packages())
 setup(
     name="spotify_recommendation",
     version="0.1",
