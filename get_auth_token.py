@@ -1,4 +1,4 @@
-import requests, base64, string, random
+import requests, base64, string, random, os, json
 import urllib.parse
 from secrets_keys import api_client_id, api_client_secret, auth_code, redirect_uri
 
@@ -8,7 +8,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
 
 import time
-SELENIUM_TIMEOUT_SECOND = 60  
+SELENIUM_TIMEOUT_SECOND = 120  
 
 def get_basic_auth_token(api_client_id=api_client_id, api_client_secret=api_client_secret):
     base64_auth = base64.b64encode(f'{api_client_id}:{api_client_secret}'.encode("ascii")).decode('ascii')
@@ -106,7 +106,18 @@ def get_auth_code_pkce() :
             return None, code_verifier
     return None, code_verifier
     
-def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri):
+def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, cache_folder = 'cache/'):
+    cache_auth_token_file = cache_folder + 'auth_token_pkce.json'
+    if os.path.exists(cache_auth_token_file) :
+        with open(cache_auth_token_file, encoding="utf8") as f :
+            cache_auth_token = json.load(f)
+        if 'access_token' in cache_auth_token and \
+            'expires_at' in cache_auth_token and \
+            cache_auth_token['expires_at'] > time.time() :
+            return cache_auth_token['access_token']
+        else :
+            os.remove(cache_auth_token_file)
+    
     auth_code, code_verifier = get_auth_code_pkce()
     if auth_code is None :
         print("could not get auth_code")        
@@ -131,7 +142,13 @@ def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri):
         return {} 
     jres = res.json()
     assert 'access_token' in jres
-    return jres
+    assert 'expires_in' in jres
+    
+    #substract 5 seconds to be sure we do not get past the timeout
+    jres['expires_at'] = time.time() + jres['expires_in'] - 5
+    with open(cache_auth_token_file, 'w', encoding="utf8") as f :
+        json.dump(jres, f)
+    return jres['access_token']
 
 
 if __name__ == '__main__' :
