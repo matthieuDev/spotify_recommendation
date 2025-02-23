@@ -78,7 +78,7 @@ def get_auth_code_pkce() :
     query_params =  {
         'response_type': 'code',
         'client_id': api_client_id,
-        'scope': 'user-read-private user-read-email',
+        'scope': 'playlist-modify-private%20playlist-modify-public',
         'code_challenge_method': 'S256',
         'code_challenge': code_challenge,
         'redirect_uri': redirect_uri,

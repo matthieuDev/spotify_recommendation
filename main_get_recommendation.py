@@ -1,9 +1,9 @@
 import requests, json, os, time
-from get_auth_token import get_auth_token_with_auth_code
+from get_auth_token import get_auth_token_pkce
 from spotify_querier import spotify_querier
 
 def get_recommendation(playlist_id_to_recommend, new_playlist_name, user_id):
-    auth_token = get_auth_token_with_auth_code()
+    auth_token = get_auth_token_pkce()
     querier = spotify_querier(auth_token)
     
     track_count = querier.get_recommended_tracks_for_playlist(playlist_id_to_recommend)
