@@ -1,6 +1,7 @@
 import requests, json, os, time
 import urllib.parse
 from .path import cache_folder
+from spotify_recommendation.secrets_keys import api_client_id
 
 class spotify_querier :
     def __init__(self, api_auth_token, cache_folder = cache_folder) :
@@ -26,14 +27,32 @@ class spotify_querier :
         if self.web_authorisation_token is None or \
             self.web_authorisation_token_expiration_date is None or\
             self.web_authorisation_token_expiration_date < time.time():
-            response = requests.get("https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
-            if response.status_code != 200 :
-                print("error, response text:", response.text)
-                return {}
-            r_token = response.json()
+            
+            payload = {
+                "client_data": {
+                    "client_version": "1.2.74.270.g75831607",
+                    "client_id": api_client_id,
+                    "js_sdk_data": {
+                        "device_brand": "unknown",
+                        "device_model": "unknown",
+                        "os": "windows",
+                        "os_version": "NT 10.0",
+                        "device_id": "",
+                        "device_type": "computer"
+                    }
+                }
+            }
+            headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+            }
 
-            self.web_authorisation_token_expiration_date = r_token['accessTokenExpirationTimestampMs'] / 1000
-            self.web_authorisation_token_expiration = r_token['accessToken'] 
+            r_token = self.post("https://clienttoken.spotify.com/v1/clienttoken", headers=headers, payload=payload)
+            
+            assert 'granted_token' in r_token and 'token' in r_token['granted_token'] and 'expires_after_seconds' in r_token['granted_token']
+
+            self.web_authorisation_token_expiration_date = time.time() + r_token['granted_token']['expires_after_seconds']
+            self.web_authorisation_token_expiration = r_token['granted_token']['token'] 
         
         return self.web_authorisation_token_expiration
 
@@ -43,7 +62,11 @@ class spotify_querier :
             with open(cached_path, encoding='utf8') as f :
                 return json.load(f)
             
-        response = requests.request("POST", url, headers=headers, data=json.dumps(payload)).json()
+        response = requests.request("POST", url, headers=headers, data=json.dumps(payload))
+        if response.status_code != 200 :
+            print("error code {response.status_code}, response text:", response.text)
+            return {}
+        response = response.json()
         
         if not cached_filename is None :
             with open(cached_path, 'w', encoding='utf8') as f :
@@ -58,7 +81,7 @@ class spotify_querier :
             
         response = requests.request("GET", url, headers=headers)
         if response.status_code != 200 :
-            print("error, response text:", response.text)
+            print(f"error code {response.status_code}, response text:", response.text)
             return {}
         response = response.json()
         
