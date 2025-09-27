@@ -63,9 +63,7 @@ def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, 
     if auth_code is None :
         print("could not get auth_code")        
         return
-    
-    print("auth_code", auth_code)
-    
+        
     res = requests.post(
         'https://accounts.spotify.com/api/token',
         headers={

@@ -4,9 +4,10 @@ from .path import cache_folder
 from spotify_recommendation.secrets_keys import api_client_id
 
 class spotify_querier :
-    def __init__(self, api_auth_token, cache_folder = cache_folder) :
+    def __init__(self, api_auth_token, api_spclient_wg_spotify_bearer=None, cache_folder = cache_folder) :
         self.api_auth_token =  api_auth_token
         self.cache_folder = cache_folder
+        self.api_spclient_wg_spotify_bearer = api_spclient_wg_spotify_bearer
         
         self.web_authorisation_token = None
         self.web_authorisation_token_expiration_date = None
@@ -16,6 +17,9 @@ class spotify_querier :
             os.mkdir(self.cache_folder)
             
     def get_web_authorisation_token(self) :
+        if not self.api_spclient_wg_spotify_bearer is None :
+            return self.api_spclient_wg_spotify_bearer
+
         if self.web_authorisation_token is None or \
             self.web_authorisation_token_expiration_date is None or\
             self.web_authorisation_token_expiration_date < time.time():
@@ -91,7 +95,27 @@ class spotify_querier :
             },
             cached_filename = f'playlist_{playlist_id}',
         )
-    
+    def get_all_tracks_from_playlist(self, playlist_id) :
+        list_tracks = []
+
+        for i in range(0,10000,100) :
+            response = self.get(
+                f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks?offset={i}',
+                headers = {
+                    'Authorization': f'Bearer {self.api_auth_token}'
+                },
+                cached_filename=f'playlists_{playlist_id}_tracks_it{i}',
+            )
+
+            tracks = response['items']
+
+            list_tracks.extend(tracks)
+            if len(tracks) < 100 :
+                return list_tracks
+            
+        print('get_all_tracks_from_playlist out of the loop')
+        return list_tracks
+
     def get_track(self, track_id):
         if track_id.startswith('spotify:track:'):
             track_id = track_id.replace('spotify:track:', '')
@@ -131,8 +155,14 @@ class spotify_querier :
             cached_filename = f'tracks_of_recommended_playlist_{playlist_id}',
         )
         
-    def get_recommended_tracks_for_playlist(self, playlist_id):
+    def get_recommended_tracks_for_playlist(self, playlist_id, exlude_track_from_playlist=[]):
         track_count = {}
+        
+        exlude_tracks_uri = set()
+        for playlist_id in exlude_track_from_playlist + [playlist_id] :
+            it_exclude_track_list = self.get_all_tracks_from_playlist(playlist_id)
+            for track in it_exclude_track_list :
+                exlude_tracks_uri.add(track['track']['uri'])
 
         playlist_to_recommend = self.get_playlist(playlist_id)
         for track in playlist_to_recommend['tracks']['items']:
@@ -146,6 +176,11 @@ class spotify_querier :
             for recommended_track_container in recommended_tracks['data']['playlistV2']['content']['items']:
                 recommended_track = recommended_track_container['itemV2']['data']
                 uri = recommended_track['uri']
+                
+                if uri in exlude_tracks_uri :
+                    print(uri, 'skipped')
+                    continue
+                
                 if uri in track_count :
                     track_count[uri]['nb_recommended'] += 1
                 else :
