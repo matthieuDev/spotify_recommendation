@@ -1,6 +1,6 @@
 import requests, base64, string, random, os, json
 import urllib.parse
-from spotify_recommendation.secrets_keys import api_client_id, redirect_uri
+from spotify_recommendation.secrets_keys import api_client_id, api_client_secret, redirect_uri
 from spotify_recommendation.path import cache_folder
 
 from hashlib import sha256
@@ -14,23 +14,14 @@ SELENIUM_TIMEOUT_SECOND = 120
 def generate_random_string(length):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-def generate_code_challenge_pkce(codeVerifier):
-    sha = sha256(codeVerifier.encode('utf-8'))
-    return base64.b64encode(sha.digest()).decode("utf8")\
-        .replace('=', '')\
-        .replace('+', '-')\
-        .replace('/', '_')
-        
 def get_auth_code_pkce() :
-    code_verifier  = generate_random_string(64)
-    code_challenge = generate_code_challenge_pkce(code_verifier)
+    code_state  = generate_random_string(16)
 
     query_params =  {
         'response_type': 'code',
         'client_id': api_client_id,
         'scope': 'playlist-modify-private%20playlist-modify-public',
-        'code_challenge_method': 'S256',
-        'code_challenge': code_challenge,
+        'state': code_state,
         'redirect_uri': redirect_uri,
     }
     driver = webdriver.Firefox()
@@ -46,15 +37,15 @@ def get_auth_code_pkce() :
                 if len(auth_codes) == 0 :
                     print("auth code not found")
                     return None
-                return auth_codes[0], code_verifier
+                return auth_codes[0]
         except (NoSuchElementException, WebDriverException, AssertionError):
             print('The driver appears to be dead')
             try : 
                 driver.quit()
             except :
                 pass
-            return None, code_verifier
-    return None, code_verifier
+            return None
+    return None
     
 def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, cache_folder = cache_folder):
     cache_auth_token_file = cache_folder + 'auth_token_pkce.json'
@@ -68,22 +59,24 @@ def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, 
         else :
             os.remove(cache_auth_token_file)
     
-    auth_code, code_verifier = get_auth_code_pkce()
+    auth_code = get_auth_code_pkce()
     if auth_code is None :
         print("could not get auth_code")        
         return
     
+    print("auth_code", auth_code)
+    
     res = requests.post(
         'https://accounts.spotify.com/api/token',
         headers={
-             'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + base64.b64encode(f"{api_client_id}:{api_client_secret}".encode()).decode(),
         },
         data={
             "client_id": api_client_id,
             "grant_type": 'authorization_code',
             "code": auth_code,
             "redirect_uri": redirect_uri,
-            "code_verifier": code_verifier,
         },
     )
 

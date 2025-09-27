@@ -35,8 +35,8 @@ class spotify_querier :
                 }
             }
             headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
 
             r_token = self.post("https://clienttoken.spotify.com/v1/clienttoken", headers=headers, payload=payload)
@@ -56,7 +56,7 @@ class spotify_querier :
             
         response = requests.request("POST", url, headers=headers, data=json.dumps(payload))
         if response.status_code != 200 :
-            print("error code {response.status_code}, response text:", response.text)
+            print(f"error code {response.status_code}, response text:", response.text)
             return {}
         response = response.json()
         
