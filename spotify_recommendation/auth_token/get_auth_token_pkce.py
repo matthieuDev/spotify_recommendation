@@ -20,7 +20,7 @@ def get_auth_code_pkce() :
     query_params =  {
         'response_type': 'code',
         'client_id': api_client_id,
-        'scope': 'playlist-modify-private%20playlist-modify-public',
+        'scope': 'playlist-modify-private%20playlist-modify-public%20user-library-read',
         'state': code_state,
         'redirect_uri': redirect_uri,
     }
@@ -78,7 +78,7 @@ def get_auth_token_pkce(api_client_id=api_client_id, redirect_uri=redirect_uri, 
         },
     )
 
-    if res.status_code != 200:
+    if res.status_code >= 300:
         print('"error, response text:", ', res.text)
         return {} 
     jres = res.json()

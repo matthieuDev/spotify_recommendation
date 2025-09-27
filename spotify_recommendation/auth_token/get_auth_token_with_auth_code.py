@@ -35,7 +35,7 @@ def get_auth_token_with_auth_code(auth_code=auth_code, api_client_id=api_client_
         },
     )
 
-    if res.status_code != 200:
+    if res.status_code >= 300:
         print('"error, response text:", ', res.text)
         return {} 
     jres = res.json()

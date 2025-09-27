@@ -59,7 +59,7 @@ class spotify_querier :
                 return json.load(f)
             
         response = requests.request("POST", url, headers=headers, data=json.dumps(payload))
-        if response.status_code != 200 :
+        if response.status_code >= 300 :
             print(f"error code {response.status_code}, response text:", response.text)
             return {}
         response = response.json()
@@ -76,7 +76,7 @@ class spotify_querier :
                 return json.load(f)
             
         response = requests.request("GET", url, headers=headers)
-        if response.status_code != 200 :
+        if response.status_code >= 300 :
             print(f"error code {response.status_code}, response text:", response.text)
             return {}
         response = response.json()
@@ -95,6 +95,7 @@ class spotify_querier :
             },
             cached_filename = f'playlist_{playlist_id}',
         )
+
     def get_all_tracks_from_playlist(self, playlist_id) :
         list_tracks = []
 
@@ -114,6 +115,28 @@ class spotify_querier :
                 return list_tracks
             
         print('get_all_tracks_from_playlist out of the loop')
+        return list_tracks
+    
+    
+    def get_all_my_liked_tracks(self) :
+        list_tracks = []
+
+        for i in range(0,10000,50) :
+            response = self.get(
+                f'https://api.spotify.com/v1/me/tracks?limit=50&offset={i}',
+                headers = {
+                    'Authorization': f'Bearer {self.api_auth_token}'
+                },
+                cached_filename=f'liked_tracks_it{i}',
+            )
+
+            tracks = response['items']
+
+            list_tracks.extend(tracks)
+            if len(tracks) < 50 :
+                return list_tracks
+            
+        print('get_all_my_liked_tracks out of the loop')
         return list_tracks
 
     def get_track(self, track_id):
@@ -155,7 +178,7 @@ class spotify_querier :
             cached_filename = f'tracks_of_recommended_playlist_{playlist_id}',
         )
         
-    def get_recommended_tracks_for_playlist(self, playlist_id, exlude_track_from_playlist=[]):
+    def get_recommended_tracks_for_playlist(self, playlist_id, exlude_track_from_playlist=[],exlude_liked_song_playlists=False):
         track_count = {}
         
         exlude_tracks_uri = set()
@@ -163,6 +186,12 @@ class spotify_querier :
             it_exclude_track_list = self.get_all_tracks_from_playlist(playlist_id)
             for track in it_exclude_track_list :
                 exlude_tracks_uri.add(track['track']['uri'])
+                
+        if exlude_liked_song_playlists : 
+            it_exclude_track_list = self.get_all_my_liked_tracks()
+            for track in it_exclude_track_list :
+                exlude_tracks_uri.add(track['track']['uri'])
+            
 
         playlist_to_recommend = self.get_playlist(playlist_id)
         for track in playlist_to_recommend['tracks']['items']:
@@ -178,7 +207,7 @@ class spotify_querier :
                 uri = recommended_track['uri']
                 
                 if uri in exlude_tracks_uri :
-                    print(uri, 'skipped')
+                    print(recommended_track['name'], 'skipped')
                     continue
                 
                 if uri in track_count :
@@ -192,7 +221,7 @@ class spotify_querier :
         
         return track_count
 
-    def create_playlist(self, user_id, new_playlist_name, new_playlist_recommendation) :
+    def create_playlist(self, user_id, new_playlist_name, new_playlist_description) :
         
         return self.post(
             f'https://api.spotify.com/v1/users/{user_id}/playlists',
@@ -202,7 +231,7 @@ class spotify_querier :
             },
             payload={
                 "name": new_playlist_name,
-                "description": new_playlist_recommendation,
+                "description": new_playlist_description,
                 "public": False,
             },
         )
