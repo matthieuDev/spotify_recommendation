@@ -16,14 +16,6 @@ class spotify_querier :
             os.mkdir(self.cache_folder)
             
     def get_web_authorisation_token(self) :
-        '''
-        requests return type : {
-            'clientId': 'XXXXXXXXX',
-            'accessToken': 'XXXXXXXXX',
-            'accessTokenExpirationTimestampMs': [timestamp in ms],
-            'isAnonymous': True
-        }
-        '''
         if self.web_authorisation_token is None or \
             self.web_authorisation_token_expiration_date is None or\
             self.web_authorisation_token_expiration_date < time.time():
