@@ -3,19 +3,32 @@ import urllib.parse
 from .path import cache_folder
 from spotify_recommendation.secrets_keys import api_client_id
 
+class pathfinder_secrets:
+    def __init__(self,
+        api_spclient_wg_spotify_bearer,
+        api_spclient_wg_spotify_client_token,
+        api_spclient_wg_spotify_hash,
+    ) :
+        self.api_spclient_wg_spotify_bearer = api_spclient_wg_spotify_bearer 
+        self.api_spclient_wg_spotify_client_token = api_spclient_wg_spotify_client_token 
+        self.api_spclient_wg_spotify_hash = api_spclient_wg_spotify_hash 
+
 class spotify_querier :
-    def __init__(self, api_auth_token, api_spclient_wg_spotify_bearer=None, cache_folder = cache_folder) :
+    def __init__(self, api_auth_token, pathfinder_secrets=None, cache_folder = cache_folder) :
         self.api_auth_token =  api_auth_token
         self.cache_folder = cache_folder
-        self.api_spclient_wg_spotify_bearer = api_spclient_wg_spotify_bearer
-        
+        self.pathfinder_secrets = pathfinder_secrets
+
+        '''
         self.web_authorisation_token = None
         self.web_authorisation_token_expiration_date = None
         self.web_authorisation_token = self.get_web_authorisation_token()
+        '''
         
         if not os.path.exists(self.cache_folder) :
             os.mkdir(self.cache_folder)
-            
+
+    '''  
     def get_web_authorisation_token(self) :
         if not self.api_spclient_wg_spotify_bearer is None :
             return self.api_spclient_wg_spotify_bearer
@@ -51,9 +64,11 @@ class spotify_querier :
             self.web_authorisation_token_expiration = r_token['granted_token']['token'] 
         
         return self.web_authorisation_token_expiration
+    '''
 
     def post(self, url, headers, payload, cached_filename=None):
-        if not cached_filename is None and os.path.exists(cached_path):
+        cached_path = f'{self.cache_folder}{cached_filename}.json'
+        if os.path.exists(cached_path):
             cached_path = f'{self.cache_folder}{cached_filename}.json'
             with open(cached_path, encoding='utf8') as f :
                 return json.load(f)
@@ -156,7 +171,7 @@ class spotify_querier :
         return self.get(
             f"https://spclient.wg.spotify.com/inspiredby-mix/v2/seed_to_playlist/spotify:track:{track_id}?response-format=json",
             headers = {
-                'Authorization': f'Bearer {self.get_web_authorisation_token()}'
+                'Authorization': f'Bearer {self.pathfinder_secrets.api_spclient_wg_spotify_bearer}'
             },
             cached_filename = f'seed_to_playlist_{track_id}',
         )
@@ -165,15 +180,28 @@ class spotify_querier :
         
         if playlist_id.startswith('spotify:playlist:'):
             playlist_id = playlist_id.replace('spotify:playlist:', '')
-            
-        extensions_param = urllib.parse.quote('{"persistedQuery":{"version":1,"sha256Hash":"5372ff05b73f2a1c21b392a238c462f6d2a1391200a47ddac51984e0d3fcd65b"}')
-        variables_params = urllib.parse.quote(json.dumps({"uri":f"spotify:playlist:{playlist_id}","offset":0,"limit":100}).replace(' ', ''))
-        url = f"https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylistContentsWithGatedEntityRelations&variables={variables_params}&extensions={extensions_param}%7D"
 
-        return self.get(
-            url,
+        return self.post(
+            "https://api-partner.spotify.com/pathfinder/v2/query",
             headers = {
-                'authorization': f'Bearer {self.get_web_authorisation_token()}'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0',
+                'Content-Type': 'application/json;charset=UTF-8',
+                'Authorization': f'Bearer {self.pathfinder_secrets.api_spclient_wg_spotify_bearer}',
+                'client-token': self.pathfinder_secrets.api_spclient_wg_spotify_client_token,
+            },
+            payload={
+                "variables": {
+                    "uri": f"spotify:playlist:{playlist_id}",
+                    "offset": 0,
+                    "limit": 50,
+                },
+                "operationName": "fetchPlaylistContents",
+                "extensions": {
+                    "persistedQuery": {
+                        "version": 1,
+                        "sha256Hash": self.pathfinder_secrets.api_spclient_wg_spotify_hash,
+                    }
+                }
             },
             cached_filename = f'tracks_of_recommended_playlist_{playlist_id}',
         )
@@ -201,7 +229,10 @@ class spotify_querier :
             recommended_playlist_id = recommended_playlist['mediaItems'][0]['uri']
             
             recommended_tracks = self.get_tracks_from_recommended_playlist(recommended_playlist_id)
-            
+            if not recommended_tracks:
+                print(track_id, 'failed, skipped')
+                continue
+                
             for recommended_track_container in recommended_tracks['data']['playlistV2']['content']['items']:
                 recommended_track = recommended_track_container['itemV2']['data']
                 uri = recommended_track['uri']

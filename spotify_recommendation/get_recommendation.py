@@ -1,10 +1,20 @@
 from spotify_recommendation.auth_token import get_auth_token_pkce
-from spotify_recommendation.spotify_querier import spotify_querier
-from spotify_recommendation.secrets_keys import api_spclient_wg_spotify_bearer
+from spotify_recommendation.spotify_querier import spotify_querier, pathfinder_secrets
+from spotify_recommendation.secrets_keys import (
+    api_spclient_wg_spotify_bearer, api_spclient_wg_spotify_client_token,
+    api_spclient_wg_spotify_hash,
+) 
 
 def get_recommendation(playlist_id_to_recommend, new_playlist_name, user_id, exlude_track_from_playlist=[], exlude_liked_song_playlists=False):
     auth_token = get_auth_token_pkce()
-    querier = spotify_querier(auth_token, api_spclient_wg_spotify_bearer=api_spclient_wg_spotify_bearer)
+    querier = spotify_querier(
+        auth_token,
+        pathfinder_secrets=pathfinder_secrets(
+            api_spclient_wg_spotify_bearer=api_spclient_wg_spotify_bearer,
+            api_spclient_wg_spotify_client_token=api_spclient_wg_spotify_client_token,
+            api_spclient_wg_spotify_hash=api_spclient_wg_spotify_hash,
+        ),
+    )
     
     track_count = querier.get_recommended_tracks_for_playlist(
         playlist_id_to_recommend,
