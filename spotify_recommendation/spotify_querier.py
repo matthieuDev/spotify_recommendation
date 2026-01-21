@@ -3,17 +3,7 @@ import urllib.parse
 from .path import cache_folder
 from spotify_recommendation.secrets_keys import api_client_id
 
-class pathfinder_secrets:
-    def __init__(self,
-        api_spclient_wg_spotify_bearer,
-        api_spclient_wg_spotify_client_token,
-        api_spclient_wg_spotify_hash,
-    ) :
-        self.api_spclient_wg_spotify_bearer = api_spclient_wg_spotify_bearer 
-        self.api_spclient_wg_spotify_client_token = api_spclient_wg_spotify_client_token 
-        self.api_spclient_wg_spotify_hash = api_spclient_wg_spotify_hash 
-
-class spotify_querier :
+class SpotifyQuerier :
     def __init__(self, api_auth_token, pathfinder_secrets=None, cache_folder = cache_folder) :
         self.api_auth_token =  api_auth_token
         self.cache_folder = cache_folder
@@ -281,5 +271,20 @@ class spotify_querier :
                 },
             ))
         return snapshot_results
-        
-        
+
+class PathfinderSecrets:
+    def __init__(self,
+        api_spclient_wg_spotify_bearer,
+        api_spclient_wg_spotify_client_token,
+        api_spclient_wg_spotify_hash,
+    ) :
+        self.api_spclient_wg_spotify_bearer = api_spclient_wg_spotify_bearer 
+        self.api_spclient_wg_spotify_client_token = api_spclient_wg_spotify_client_token 
+        self.api_spclient_wg_spotify_hash = api_spclient_wg_spotify_hash
+
+    def __str__(self):
+        return json.dumps({
+            'api_spclient_wg_spotify_bearer': self.api_spclient_wg_spotify_bearer,
+            'api_spclient_wg_spotify_client_token': self.api_spclient_wg_spotify_client_token,
+            'api_spclient_wg_spotify_hash': self.api_spclient_wg_spotify_hash,
+        })
